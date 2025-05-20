@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+        }
+
+        .user-info p {
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+
+        .user-info strong {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 0.8rem;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-align: center;
+            text-decoration: none;
+            margin-bottom: 1rem;
+        }
+
+        .update-btn {
+            background: #28a745;
+        }
+
+        .update-btn:hover {
+            background: #218838;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .logout-btn {
+            background: #6c757d;
+        }
+
+        .logout-btn:hover {
+            background: #5a6268;
+        }
+
+        .message {
+            margin-top: 1rem;
+            padding: 0.8rem;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .edit-form {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .edit-form.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Your Dashboard</h1>
+        <div class="user-info" id="userInfo">
+            <!-- User information will be populated here -->
+        </div>
+        
+        <div id="message" class="message" style="display: none;"></div>
+
+        <div class="edit-form" id="editForm">
+            <h2>Update Profile</h2>
+            <form id="updateForm">
+                <div class="form-group">
+                    <label for="editUsername">Username</label>
+                    <input type="text" id="editUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="editEmail">Email</label>
+                    <input type="email" id="editEmail" name="email" required>
+                </div>
+                <button type="submit" class="btn update-btn">Update Profile</button>
+            </form>
+        </div>
+
+        <button class="btn update-btn" onclick="toggleEditForm()">Edit Profile</button>
+        <button class="btn delete-btn" onclick="deleteAccount()">Delete Account</button>
+        <a href="/login.html" class="btn logout-btn" onclick="logout()">Logout</a>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!user) {
+            window.location.href = '/login.html';
+        }
+
+        // Display user information
+        const userInfoDiv = document.getElementById('userInfo');
+        const editForm = document.getElementById('editForm');
+        const updateForm = document.getElementById('updateForm');
+        const messageDiv = document.getElementById('message');
+
+        function displayUserInfo() {
+            userInfoDiv.innerHTML = `
+                <p><strong>Username:</strong> ${user.username}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>Account Created:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+            `;
+        }
+
+        displayUserInfo();
+
+        function toggleEditForm() {
+            editForm.classList.toggle('active');
+            if (editForm.classList.contains('active')) {
+                document.getElementById('editUsername').value = user.username;
+                document.getElementById('editEmail').value = user.email;
+            }
+        }
+
+        updateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const updatedUser = {
+                username: document.getElementById('editUsername').value,
+                email: document.getElementById('editEmail').value
+            };
+
+            try {
+                const response = await fetch(`/api/users/${user._id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedUser)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = 'Profile updated successfully!';
+                    user.username = updatedUser.username;
+                    user.email = updatedUser.email;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    displayUserInfo();
+                    toggleEditForm();
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = data.error || 'Failed to update profile';
+                }
+                
+                messageDiv.style.display = 'block';
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = 'An error occurred while updating profile';
+                messageDiv.style.display = 'block';
+            }
+        });
+
+        async function deleteAccount() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`/api/users/${user._id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        logout();
+                        window.location.href = '/login.html';
+                    } else {
+                        const data = await response.json();
+                        messageDiv.className = 'message error';
+                        messageDiv.textContent = data.error || 'Failed to delete account';
+                        messageDiv.style.display = 'block';
+                    }
+                } catch (error) {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = 'An error occurred while deleting account';
+                    messageDiv.style.display = 'block';
+                }
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+        }
+    </script>
+</body>
+</html> 
